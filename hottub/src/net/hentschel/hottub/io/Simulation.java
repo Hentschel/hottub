@@ -70,11 +70,11 @@ class Simulation
         inputstate.put(RaspiPin.GPIO_05, IDigitalIO.State.Off);
 
         relays.put(RaspiPin.GPIO_01, ILCDScreen.BACKLITE);
-        relays.put(RaspiPin.GPIO_12, Pump.ID);
-        relays.put(RaspiPin.GPIO_10, Blower.ID);
-        relays.put(RaspiPin.GPIO_11, Heater.ID);
+        relays.put(RaspiPin.GPIO_07, Pump.ID);
+        relays.put(RaspiPin.GPIO_15, Heater.ID);
+        relays.put(RaspiPin.GPIO_16, Blower.ID);
 
-        this.heaterpin = RaspiPin.GPIO_11;
+        this.heaterpin = RaspiPin.GPIO_15;
 
         outputstate.put(RaspiPin.GPIO_01, IDigitalIO.State.Off);
         outputstate.put(RaspiPin.GPIO_06, IDigitalIO.State.Off);

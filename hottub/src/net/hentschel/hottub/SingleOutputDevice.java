@@ -102,6 +102,15 @@ abstract class SingleOutputDevice
 
     protected abstract void init();
 
+    private boolean interlock()
+    {
+        if (this.interlock != null)
+        {
+            return this.interlock.eval() == false;
+        }
+        return false;
+    }
+
     /**
      * is this device on? 
      * @return the state
@@ -109,6 +118,16 @@ abstract class SingleOutputDevice
     final boolean isOn()
     {
         return this.getIOPoint().isOn();
+    }
+
+    boolean isScheduledOff()
+    {
+        return State.Off.equals(this.pending);
+    }
+
+    boolean isScheduledOn()
+    {
+        return State.On.equals(this.pending);
     }
 
     private TimerTask newTimerTask()
@@ -130,7 +149,7 @@ abstract class SingleOutputDevice
      */
     protected synchronized void off()
     {
-        if (!this.isOn())
+        if (!this.isOn() || this.isScheduledOff())
         {
             return;
         }
@@ -150,27 +169,13 @@ abstract class SingleOutputDevice
             return;
         }
         
-        if (this.isOn())
+        if (this.isOn() || this.isScheduledOn())
         {
             return;
         }
         this.setPending(IDigitalIO.State.On);
     }
-
-    private boolean interlock()
-    {
-        if (this.interlock != null)
-        {
-            return this.interlock.eval() == false;
-        }
-        return false;
-    }
     
-    public void setInterlock(Interlock interlock)
-    {
-        this.interlock = interlock;
-    }
-
     /**
      * schedule to turn this device off in the future.
      * if the device receives a command to turn on during that time, this
@@ -206,6 +211,11 @@ abstract class SingleOutputDevice
         this.delay = delay;
     }
 
+    public void setInterlock(Interlock interlock)
+    {
+        this.interlock = interlock;
+    }
+
     /**
      * set the event to be broadcast when this device turns off
      * @param evt (can be null)
@@ -235,11 +245,13 @@ abstract class SingleOutputDevice
 
             if (this.getIOPoint().getState().equals(pending))
             {
+                this.app.debug(this.getClass().getSimpleName() + ": cancelled state change to " + pending.name() + " b/c I/O state already set");        
                 this.pending = null;
                 return;
             }
 
             this.pending = pending;
+            this.app.debug(this.getClass().getSimpleName() + ": pending state change to " + pending.name() + " in " + this.delay + "msec");        
             this.timer.schedule(this.newTimerTask(), this.delay);
         }
     }

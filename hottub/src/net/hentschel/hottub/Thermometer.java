@@ -27,7 +27,7 @@ import com.pi4j.io.i2c.I2CBus;
 class Thermometer
 {
 
-    private static final double TEMPERATURE_THRESHOLD = 0.3; //Fahrenheit
+    private static final double TEMPERATURE_THRESHOLD = 0.2; //Fahrenheit
 
     private static final long UPDATE_PERIOD = 1000;
 

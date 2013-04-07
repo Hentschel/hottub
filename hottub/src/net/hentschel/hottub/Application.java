@@ -54,10 +54,10 @@ public class Application
         IOMAP.put(ButtonField.RIGHT, IDigitalInput.Factory.create(RaspiPin.GPIO_00));   //schematic key 1
 
         // outputs (relays, screen backlite)
-        IOMAP.put(ILCDScreen.BACKLITE, IDigitalOutput.Factory.create(RaspiPin.GPIO_01));
-        IOMAP.put(Pump.ID, IDigitalOutput.Factory.create(RaspiPin.GPIO_12));
-        IOMAP.put(Blower.ID, IDigitalOutput.Factory.create(RaspiPin.GPIO_10));
-        IOMAP.put(Heater.ID, IDigitalOutput.Factory.create(RaspiPin.GPIO_11));
+        IOMAP.put(ILCDScreen.BACKLITE, IDigitalOutput.Factory.create(RaspiPin.GPIO_01, false));
+        IOMAP.put(Pump.ID, IDigitalOutput.Factory.create(RaspiPin.GPIO_07, true));
+        IOMAP.put(Heater.ID, IDigitalOutput.Factory.create(RaspiPin.GPIO_15, true));
+        IOMAP.put(Blower.ID, IDigitalOutput.Factory.create(RaspiPin.GPIO_16, true));
     }
 
     public static final Map<String, IDigitalIO> getIOMap()
@@ -73,7 +73,7 @@ public class Application
         }
         if (type.equalsIgnoreCase("I2CSensor"))
         {
-            return true;
+            return false;
         }
         if (type.equalsIgnoreCase("IDigitalIO"))
         {

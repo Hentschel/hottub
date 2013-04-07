@@ -18,26 +18,41 @@ import com.pi4j.io.gpio.PinState;
 class GPIODigitalOutput extends GPIODigitalIO implements IDigitalOutput
 {
     private GpioPinDigitalOutput pin;
+    private boolean activeLow;
 
     /**
      * Constructs a new <tt>DigitalOutput</tt>.
      * @param gpio 
      */
-    public GPIODigitalOutput(Pin gpio)
+    public GPIODigitalOutput(Pin gpio, boolean activeLow)
     {
         super(gpio);
+        this.activeLow = activeLow;
     }
 
     public State getState()
     {
         if (this.pin.isHigh())
         {
-            return State.On;
+            if(this.activeLow)
+            {
+                return State.Off;
+            }
+            else
+            {
+                return State.On;
+            }
         }
         else if (this.pin.isLow())
         {
-            return State.Off;
-
+            if(this.activeLow)
+            {
+                return State.On;
+            }
+            else
+            {
+                return State.Off;
+            }
         }
         return State.Unknown;
     }
@@ -45,7 +60,8 @@ class GPIODigitalOutput extends GPIODigitalIO implements IDigitalOutput
     public void init()
     {
         final GpioController gpio = GpioFactory.getInstance();
-        this.pin = gpio.provisionDigitalOutputPin(this.io, PinState.LOW);
+        PinState state = this.activeLow ? PinState.HIGH : PinState.LOW;
+        this.pin = gpio.provisionDigitalOutputPin(this.io, state);
     }
 
     /* (non-Javadoc)
@@ -53,7 +69,14 @@ class GPIODigitalOutput extends GPIODigitalIO implements IDigitalOutput
      */
     public void setOff()
     {
-        this.pin.low();
+        if(this.activeLow)
+        {
+            this.pin.high();
+        }
+        else
+        {
+            this.pin.low();
+        }
     }
 
     /* (non-Javadoc)
@@ -61,6 +84,13 @@ class GPIODigitalOutput extends GPIODigitalIO implements IDigitalOutput
      */
     public void setOn()
     {
-        this.pin.high();
+        if(this.activeLow)
+        {
+            this.pin.low();
+        }
+        else
+        {
+            this.pin.high();
+        }
     }
 }

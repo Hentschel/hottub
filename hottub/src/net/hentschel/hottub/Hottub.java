@@ -27,27 +27,32 @@ import java.util.TimerTask;
 class Hottub
 {
 
+    /** default setpoint on first boot, w/o stored temp */
     private static final double DEFAULT_SETPOINT = 98;
 
+    /** the filename for temp setpoint storage */
     private static final String SETPOINT_FILENAME = "/tmp/tmpsetpoint";
 
-    private static final double MINTEMP = 90;
+    /** selectable min temp */
+    private static double MINTEMP = 75;
 
-    private static final double MAXTEMP = 104;
+    /** selectable max temp */
+    private static double MAXTEMP = 104;
 
-    private static final Temperature THRESHOLD = new Temperature(.75, Temperature.Unit.Fahrenheit);
+    /** hysteresis for heater on/off */
+    private static Temperature HYSTERESIS = new Temperature(.5, Temperature.Unit.Fahrenheit);
 
-    private static final long HEATER_ON_DELAY = 1 * 1000; // 5 second
+    /** delay before turning heater on */
+    private static long HEATER_ON_DELAY = 15 * 1000; // 18 second
 
-    private static final long HEATER_OFF_DELAY = 1 * 1000; // 2 second
+    /** delay before turning heater off */
+    private static long HEATER_OFF_DELAY = 6 * 1000; // 6 second
 
     private Application app;
 
-    private Pump pump;
+    private Blower blower;
 
     private Heater heater;
-
-    private Blower blower;
 
     private HTSubscriber pumpHandler;
 
@@ -55,13 +60,15 @@ class Hottub
 
     private HTSubscriber tempHandler;
 
-    private Temperature setpoint;
-
-    private Thermometer thermometer;
-
     private HTSubscriber startHandler;
 
     private HTSubscriber heaterHandler;
+
+    private Pump pump;
+
+    private Temperature setpoint;
+
+    private Thermometer thermometer;
 
     /**
      * Constructs a new <tt>Hottub</tt>.
@@ -70,6 +77,14 @@ class Hottub
     Hottub(Application app)
     {
         this.app = app;
+
+        /** parse overrides from command line/property def's */
+        MINTEMP = Double.parseDouble(System.getProperty("net.hentschel.hottub.mintemp", "75"));
+        MAXTEMP = Double.parseDouble(System.getProperty("net.hentschel.hottub.maxtemp", "105"));
+        HYSTERESIS = new Temperature(Double.parseDouble(System.getProperty("net.hentschel.hottub.hysteresis", "0.5")), Temperature.Unit.Fahrenheit);
+        HEATER_ON_DELAY = Long.parseLong(System.getProperty("net.hentschel.hottub.heater-on-delay", "15")) * 1000;
+        HEATER_OFF_DELAY = Long.parseLong(System.getProperty("net.hentschel.hottub.heater-off-delay", "6")) * 1000;
+
         this.setpoint = new Temperature(readSetpointStorage(), Temperature.Unit.Fahrenheit);
         this.pumpHandler = new HTSubscriber()
         {
@@ -186,6 +201,12 @@ class Hottub
         this.app.subscribe(HTEvent.PumpOff, this.heaterHandler);
         
         this.app.subscribe(HTEvent.Start, this.startHandler);
+        
+        // initialize temperature throughout system
+        Temperature temp = this.thermometer.getTemperature();
+        HTEvent evt = HTEvent.TemperatureUpdate;
+        evt.setData(temp);
+        this.app.broadcast(evt);
     }
 
     private void pumpToggle()
@@ -287,18 +308,26 @@ class Hottub
         
         double current = this.thermometer.getTemperature().getIn(Temperature.Unit.Fahrenheit);
         double set = this.setpoint.getIn(Temperature.Unit.Fahrenheit);
-        double threshold = THRESHOLD.getIn(Temperature.Unit.Fahrenheit);
+        double hysteresis = HYSTERESIS.getIn(Temperature.Unit.Fahrenheit);
 
-        if (current < (set - threshold))
+        if (current < (set - hysteresis))
         {
-            this.heater.scheduleOn(HEATER_ON_DELAY);
-            this.app.broadcast(HTEvent.CallHeaterOn);
+            if(!this.heater.isOn() && !this.heater.isScheduledOn()) 
+            {
+                this.app.debug("current [" + current + "] < (set [" + set + "] - hysteresis [" + hysteresis + "]) ==> ask heater on in " + HEATER_ON_DELAY);
+                this.heater.scheduleOn(HEATER_ON_DELAY);
+                this.app.broadcast(HTEvent.CallHeaterOn);
+            }
         }
 
-        if (current > (set + threshold))
+        if (current > (set + hysteresis))
         {
-            this.heater.scheduleOff(HEATER_OFF_DELAY);
-            this.app.broadcast(HTEvent.CallHeaterOff);
+            if(this.heater.isOn() && !this.heater.isScheduledOff()) 
+            {
+                this.app.debug("current [" + current + "] > (set [" + set + "] + hysteresis [" + hysteresis + "]) ==> ask heater off in " + HEATER_OFF_DELAY);
+                this.heater.scheduleOff(HEATER_OFF_DELAY);
+                this.app.broadcast(HTEvent.CallHeaterOff);
+            }
         }
     }
 

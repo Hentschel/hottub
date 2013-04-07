@@ -21,13 +21,13 @@ public interface IDigitalOutput extends IDigitalIO
 {
     public class Factory
     {
-        public static IDigitalOutput create(Pin pin)
+        public static IDigitalOutput create(Pin pin, boolean activeLow)
         {
             if (Application.isSimulation(IDigitalIO.class.getSimpleName()))
             {
                 return new SimDigitalOutput(pin);
             }
-            return new GPIODigitalOutput(pin);
+            return new GPIODigitalOutput(pin, activeLow);
         }
     }
 

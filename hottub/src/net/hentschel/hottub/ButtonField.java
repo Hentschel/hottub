@@ -34,11 +34,11 @@ public class ButtonField
     private static Map<String, HTEvent> clickresponses = new HashMap<String, HTEvent>();
     static
     {
-        clickresponses.put(TOP, HTEvent.CallTogglePoolLights);
-        clickresponses.put(CENTER, HTEvent.CallSetTemperatureSetpointUp);
+        clickresponses.put(TOP, HTEvent.CallSetTemperatureSetpointUp);
+        clickresponses.put(CENTER, HTEvent.CallSetTemperatureSetpointDown);
         clickresponses.put(LEFT, HTEvent.CallTogglePump);
         clickresponses.put(RIGHT, HTEvent.CallToggleBlower);
-        clickresponses.put(BOTTOM, HTEvent.CallSetTemperatureSetpointDown);
+        clickresponses.put(BOTTOM, HTEvent.CallTogglePoolLights);
     }
     
     private Application app;
