@@ -47,7 +47,7 @@ abstract class SingleOutputDevice
     private Object lock = new Object();
 
     private Interlock interlock = null;
-    
+
     /**
      * Constructs a new <tt>SingleOutputDevice</tt>.
      */
@@ -67,9 +67,11 @@ abstract class SingleOutputDevice
                         {
                             if (SingleOutputDevice.this.pending.equals(IDigitalIO.State.On))
                             {
-                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName() + "->ON");
+                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName()
+                                        + "->ON");
                                 SingleOutputDevice.this.getIOPoint().setOn();
-                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName() + "==" + SingleOutputDevice.this.getIOPoint().getState());
+                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName()
+                                        + "==" + SingleOutputDevice.this.getIOPoint().getState());
                                 if (SingleOutputDevice.this.onEvent != null)
                                 {
                                     SingleOutputDevice.this.app.broadcast(SingleOutputDevice.this.onEvent);
@@ -77,9 +79,11 @@ abstract class SingleOutputDevice
                             }
                             else
                             {
-                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName() + "->OFF");
+                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName()
+                                        + "->OFF");
                                 SingleOutputDevice.this.getIOPoint().setOff();
-                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName() + "==" + SingleOutputDevice.this.getIOPoint().getState());
+                                SingleOutputDevice.this.app.debug(SingleOutputDevice.this.getClass().getSimpleName()
+                                        + "==" + SingleOutputDevice.this.getIOPoint().getState());
                                 if (SingleOutputDevice.this.offEvent != null)
                                 {
                                     SingleOutputDevice.this.app.broadcast(SingleOutputDevice.this.offEvent);
@@ -122,12 +126,18 @@ abstract class SingleOutputDevice
 
     boolean isScheduledOff()
     {
-        return State.Off.equals(this.pending);
+        synchronized (this.lock)
+        {
+            return State.Off.equals(this.pending);
+        }
     }
 
     boolean isScheduledOn()
     {
-        return State.On.equals(this.pending);
+        synchronized (this.lock)
+        {
+            return State.On.equals(this.pending);
+        }
     }
 
     private TimerTask newTimerTask()
@@ -149,10 +159,18 @@ abstract class SingleOutputDevice
      */
     protected synchronized void off()
     {
-        if (!this.isOn() || this.isScheduledOff())
+        // if already scheduled to turn off, just return (don't reset the timer to do so)
+        if (this.isScheduledOff())
         {
             return;
         }
+        // if this isn't on, and also not scheduled to turn on, nothing to do
+        if (!this.isOn() && !this.isScheduledOn())
+        {
+            return;
+        }
+        // if we're not on, but scheduled to turn on, the next call will cancel that (and do nothing)
+        // if we're on, then turn it off (standard case)
         this.setPending(IDigitalIO.State.Off);
     }
 
@@ -163,19 +181,25 @@ abstract class SingleOutputDevice
      */
     protected synchronized void on()
     {
-        if(this.interlock())
+        if (this.interlock())
         {
             System.err.println("interlock for " + this.getClass().getSimpleName() + " not made");
             return;
         }
-        
-        if (this.isOn() || this.isScheduledOn())
+
+        // if already schedukled on, then just return (don't reset the ON timer)
+        if (this.isScheduledOn())
+        {
+            return;
+        }
+        // if this is on and also not scheduled off, just return
+        if (this.isOn() && !this.isScheduledOff())
         {
             return;
         }
         this.setPending(IDigitalIO.State.On);
     }
-    
+
     /**
      * schedule to turn this device off in the future.
      * if the device receives a command to turn on during that time, this
@@ -238,20 +262,22 @@ abstract class SingleOutputDevice
     {
         synchronized (this.lock)
         {
-            if(this.timerTask != null)
+            if (this.timerTask != null)
             {
                 this.timerTask.cancel();
             }
 
             if (this.getIOPoint().getState().equals(pending))
             {
-                this.app.debug(this.getClass().getSimpleName() + ": cancelled state change to " + pending.name() + " b/c I/O state already set");        
+                this.app.debug(this.getClass().getSimpleName() + ": cancelled state change to " + pending.name()
+                        + " b/c I/O state already set");
                 this.pending = null;
                 return;
             }
 
             this.pending = pending;
-            this.app.debug(this.getClass().getSimpleName() + ": pending state change to " + pending.name() + " in " + this.delay + "msec");        
+            this.app.debug(this.getClass().getSimpleName() + ": pending state change to " + pending.name() + " in "
+                    + this.delay + "msec");
             this.timer.schedule(this.newTimerTask(), this.delay);
         }
     }

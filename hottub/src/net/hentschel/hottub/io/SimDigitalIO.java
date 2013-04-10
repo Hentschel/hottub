@@ -46,7 +46,7 @@ abstract public class SimDigitalIO implements IDigitalIO
      */
     public final boolean isOn()
     {
-        return this.getState().equals(State.On);
+        return State.On.equals(this.getState());
     }
 
     /* (non-Javadoc)

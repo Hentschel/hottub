@@ -14,7 +14,6 @@
 package net.hentschel.hottub.io;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,9 +76,9 @@ class Simulation
         this.heaterpin = RaspiPin.GPIO_15;
 
         outputstate.put(RaspiPin.GPIO_01, IDigitalIO.State.Off);
-        outputstate.put(RaspiPin.GPIO_06, IDigitalIO.State.Off);
         outputstate.put(RaspiPin.GPIO_07, IDigitalIO.State.Off);
-        outputstate.put(RaspiPin.GPIO_08, IDigitalIO.State.Off);
+        outputstate.put(RaspiPin.GPIO_15, IDigitalIO.State.Off);
+        outputstate.put(RaspiPin.GPIO_16, IDigitalIO.State.Off);
 
         this.inputrunner = new Runnable()
         {
@@ -113,7 +112,7 @@ class Simulation
                         }
                     }
                 }
-                catch (IOException | InterruptedException e)
+                catch (Exception e)
                 {
                     e.printStackTrace();
                 }
@@ -171,14 +170,14 @@ class Simulation
             
             if(io instanceof IDigitalOutput)
             {
-                p("new temp check: " + this.relays.get(pin) + " is " + io.getState());
+//                p("new temp check: " + this.relays.get(pin) + " is " + io.getState());
                 if(io.getPin().getAddress() == this.heaterpin.getAddress())
                 {
                     heater = (IDigitalOutput)io;
                 }
             }
         }
-        return heater.getState().equals(IDigitalIO.State.On);
+        return IDigitalIO.State.On.equals(heater.getState());
     }
 
     private synchronized void p(String string)

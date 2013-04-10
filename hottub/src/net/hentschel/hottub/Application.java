@@ -25,6 +25,7 @@ import net.hentschel.hottub.io.IDigitalIO;
 import net.hentschel.hottub.io.IDigitalInput;
 import net.hentschel.hottub.io.IDigitalOutput;
 import net.hentschel.hottub.io.ILCDScreen;
+import net.hentschel.hottub.www.WebServer;
 
 import com.pi4j.io.gpio.RaspiPin;
 
@@ -42,6 +43,10 @@ public class Application
     }
 
     private static final Map<String, IDigitalIO> IOMAP = new HashMap<String, IDigitalIO>();
+
+    private static final int DEFAULTPORT = 8888;
+
+    public static Application APP = new Application();
 
     // IO config
     static
@@ -69,15 +74,15 @@ public class Application
     {
         if (type.equalsIgnoreCase("ILCDScreen"))
         {
-            return false;
+            return true;
         }
         if (type.equalsIgnoreCase("I2CSensor"))
         {
-            return false;
+            return true;
         }
         if (type.equalsIgnoreCase("IDigitalIO"))
         {
-            return false;
+            return true;
         }
         return false;
     }
@@ -87,10 +92,9 @@ public class Application
      */
     public static void main(String[] args)
     {
-        Application app = new Application();
-        app.init();
-        app.run();
-        app.shutdown();
+        APP.init();
+        APP.run();
+        APP.shutdown();
     }
 
     private Map<HTEvent, Set<HTSubscriber>> subscriptions;
@@ -104,6 +108,8 @@ public class Application
     private BlockingQueue<HTEvent> eventqueue;
 
     private State state;
+
+    private WebServer webserver;
 
     /**
      * Constructs a new <tt>Application</tt>.
@@ -121,6 +127,16 @@ public class Application
         {
             throw new RuntimeException("queue full!");
         }
+    }
+
+    public void debug(String string)
+    {
+        System.out.println("HT: " + string);
+    }
+
+    public IHottub getHottub()
+    {
+        return this.hottub;
     }
 
     public IDigitalIO getIOFor(String id)
@@ -141,6 +157,9 @@ public class Application
         this.buttons.init();
 
         this.lcd.splash();
+        
+        this.webserver = new WebServer(this, DEFAULTPORT);
+        this.webserver.init();
 
         this.hottub = new Hottub(this);
         Heater heater = new Heater(this);
@@ -245,10 +264,5 @@ public class Application
         {
             this.subscriptions.remove(event);
         }
-    }
-
-    void debug(String string)
-    {
-        System.out.println("HT: " + string);
     }
 }

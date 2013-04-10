@@ -13,18 +13,29 @@
  */
 package net.hentschel.hottub;
 
+import java.io.Serializable;
+
 /**
  * <tt>Temperature</tt> ...
  */
-public class Temperature
+public class Temperature implements Serializable
 {
-    public enum Unit {
-        Fahrenheit(1), Celcius(0.5);
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+
+    public enum Unit implements Serializable {
+        Fahrenheit("F", "&#8457;", 1), Celcius("C", "&#8451;", 0.5);
 
         final double delta;
+        public final String display;
+        public final String html;
 
-        Unit(double incdelta)
+        Unit(String display, String html, double incdelta)
         {
+            this.display = display;
+            this.html = html;
             this.delta = incdelta;
         }
     }

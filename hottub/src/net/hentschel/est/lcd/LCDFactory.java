@@ -36,7 +36,7 @@ class LCDFactory
     public static class LCDImp implements LCD
     {
 
-        private static final int MAX_CONTRAST = 64;
+        private static final int MAX_CONTRAST = 63;
         private byte line;
 
         /**
@@ -45,7 +45,7 @@ class LCDFactory
         private LCDImp()
         {
             NativeLCDLibrary.INSTANCE.LCD_Init();
-            this.setContrast(80);
+            this.setContrast(50);
             this.setFillColor(Color.Black);
             this.setPenColor(Color.Black);
             this.setLineWidth((byte)1);

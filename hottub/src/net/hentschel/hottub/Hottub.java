@@ -24,7 +24,7 @@ import java.util.TimerTask;
 /**
  * <tt>Hottub</tt> ...
  */
-class Hottub
+public class Hottub implements IHottub
 {
 
     /** default setpoint on first boot, w/o stored temp */
@@ -81,7 +81,9 @@ class Hottub
         /** parse overrides from command line/property def's */
         MINTEMP = Double.parseDouble(System.getProperty("net.hentschel.hottub.mintemp", "75"));
         MAXTEMP = Double.parseDouble(System.getProperty("net.hentschel.hottub.maxtemp", "105"));
-        HYSTERESIS = new Temperature(Double.parseDouble(System.getProperty("net.hentschel.hottub.hysteresis", "0.5")), Temperature.Unit.Fahrenheit);
+        HYSTERESIS = new Temperature(
+            Double.parseDouble(System.getProperty("net.hentschel.hottub.hysteresis", "0.5")),
+            Temperature.Unit.Fahrenheit);
         HEATER_ON_DELAY = Long.parseLong(System.getProperty("net.hentschel.hottub.heater-on-delay", "15")) * 1000;
         HEATER_OFF_DELAY = Long.parseLong(System.getProperty("net.hentschel.hottub.heater-off-delay", "6")) * 1000;
 
@@ -150,14 +152,18 @@ class Hottub
         {
             public void eventReceived(HTEvent event)
             {
-                // set the initial set point, which also updates the screen (and the rest of the world)
+                // set the initial set point/temp, which also updates the screen (and the rest of the world)
                 Hottub.this.setTempSetpoint(Hottub.this.setpoint);
+                Temperature temp = Hottub.this.thermometer.getTemperature();
+                HTEvent evt = HTEvent.TemperatureUpdate;
+                evt.setData(temp);
+                Hottub.this.app.broadcast(evt);
             }
         };
-        
+
         this.heaterHandler = new HTSubscriber()
         {
-            
+
             public void eventReceived(HTEvent event)
             {
                 switch (event)
@@ -182,6 +188,24 @@ class Hottub
         }
     }
 
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#getCurrentTemperature()
+     */
+    @Override
+    public final Temperature getCurrentTemperature()
+    {
+        return this.thermometer.getTemperature();
+    }
+
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#getSetpointTemperature()
+     */
+    @Override
+    public Temperature getSetpointTemperature()
+    {
+        return this.setpoint;
+    }
+
     void init()
     {
         this.app.subscribe(HTEvent.CallPumpOn, this.pumpHandler);
@@ -199,14 +223,35 @@ class Hottub
 
         /** safety to turn off heater whenever the pump is off */
         this.app.subscribe(HTEvent.PumpOff, this.heaterHandler);
-        
+
         this.app.subscribe(HTEvent.Start, this.startHandler);
-        
-        // initialize temperature throughout system
-        Temperature temp = this.thermometer.getTemperature();
-        HTEvent evt = HTEvent.TemperatureUpdate;
-        evt.setData(temp);
-        this.app.broadcast(evt);
+    }
+
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#isBlowerOn()
+     */
+    @Override
+    public boolean isBlowerOn()
+    {
+        return this.blower.isOn();
+    }
+
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#isHeaterOn()
+     */
+    @Override
+    public boolean isHeaterOn()
+    {
+        return this.heater.isOn();
+    }
+
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#isPumpOn()
+     */
+    @Override
+    public boolean isPumpOn()
+    {
+        return this.pump.isOn();
     }
 
     private void pumpToggle()
@@ -273,8 +318,12 @@ class Hottub
     {
         this.setTempSetpoint((Temperature) event.getData());
     }
-
-    private void setTempSetpoint(Temperature t)
+    
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#setTempSetpoint(net.hentschel.hottub.Temperature)
+     */
+    @Override
+    public void setTempSetpoint(Temperature t)
     {
         double tval = t.getIn(Temperature.Unit.Fahrenheit);
         if (tval > MINTEMP && tval < MAXTEMP)
@@ -300,38 +349,48 @@ class Hottub
 
     private void temperatureEval()
     {
-        if(!this.pump.isOn())
+        if (!this.pump.isOn())
         {
             this.heater.off();
             return;
         }
-        
+
         double current = this.thermometer.getTemperature().getIn(Temperature.Unit.Fahrenheit);
         double set = this.setpoint.getIn(Temperature.Unit.Fahrenheit);
         double hysteresis = HYSTERESIS.getIn(Temperature.Unit.Fahrenheit);
 
-        if (current < (set - hysteresis))
+        if (current < (set - hysteresis) && !this.heater.isScheduledOn())
         {
-            if(!this.heater.isOn() && !this.heater.isScheduledOn()) 
-            {
-                this.app.debug("current [" + current + "] < (set [" + set + "] - hysteresis [" + hysteresis + "]) ==> ask heater on in " + HEATER_ON_DELAY);
-                this.heater.scheduleOn(HEATER_ON_DELAY);
-                this.app.broadcast(HTEvent.CallHeaterOn);
-            }
+            this.app.debug("current [" + current + "] < (set [" + set + "] - hysteresis [" + hysteresis
+                    + "]) ==> ask heater on in " + HEATER_ON_DELAY + " - heater is [" + (this.heater.isOn() ? "ON" : "OFF") + "]");
+            this.heater.scheduleOn(HEATER_ON_DELAY);
+            this.app.broadcast(HTEvent.CallHeaterOn);
         }
 
-        if (current > (set + hysteresis))
+        if (current > (set + hysteresis) && !this.heater.isScheduledOff())
         {
-            if(this.heater.isOn() && !this.heater.isScheduledOff()) 
-            {
-                this.app.debug("current [" + current + "] > (set [" + set + "] + hysteresis [" + hysteresis + "]) ==> ask heater off in " + HEATER_OFF_DELAY);
-                this.heater.scheduleOff(HEATER_OFF_DELAY);
-                this.app.broadcast(HTEvent.CallHeaterOff);
-            }
+            this.app.debug("current [" + current + "] > (set [" + set + "] + hysteresis [" + hysteresis
+                    + "]) ==> ask heater off in " + HEATER_OFF_DELAY + " - heater is [" + (this.heater.isOn() ? "ON" : "OFF") + "]");
+            this.heater.scheduleOff(HEATER_OFF_DELAY);
+            this.app.broadcast(HTEvent.CallHeaterOff);
         }
     }
 
-    private void turnBlowerOff()
+    public String toString()
+    {
+        String result = "";
+        result += "Pump  : [" + (this.pump.isOn() ? "ON" : "OFF") + "]\r\n";
+        result += "Heater: [" + (this.heater.isOn() ? "ON" : "OFF") + "]\r\n";
+        result += "Blower: [" + (this.blower.isOn() ? "ON" : "OFF") + "]\r\n";
+        result += "Temp  : [" + (this.thermometer.getTemperature()) + "]\r\n";
+        return result;
+    }
+
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#turnBlowerOff()
+     */
+    @Override
+    public void turnBlowerOff()
     {
         if (this.blower.isOn())
         {
@@ -339,7 +398,11 @@ class Hottub
         }
     }
 
-    private void turnBlowerOn()
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#turnBlowerOn()
+     */
+    @Override
+    public void turnBlowerOn()
     {
         if (!this.blower.isOn())
         {
@@ -347,7 +410,11 @@ class Hottub
         }
     }
 
-    private void turnPumpOff()
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#turnPumpOff()
+     */
+    @Override
+    public void turnPumpOff()
     {
         if (this.pump.isOn())
         {
@@ -355,21 +422,27 @@ class Hottub
         }
     }
 
-    private void turnPumpOn()
+    /* (non-Javadoc)
+     * @see net.hentschel.hottub.IHeater#turnPumpOn()
+     */
+    @Override
+    public void turnPumpOn()
     {
         if (!this.pump.isOn())
         {
             this.pump.on();
-            
+
             // retrigger temp eval later (after pump state is settled) 
-            new Timer().schedule(new TimerTask(){
+            new Timer().schedule(new TimerTask()
+            {
 
                 public void run()
                 {
                     HTEvent evt = HTEvent.SetTemperatureSetpoint;
                     evt.setData(Hottub.this.setpoint);
                     Hottub.this.app.broadcast(evt);
-                }}, 2000L);
+                }
+            }, 2000L);
         }
     }
 
