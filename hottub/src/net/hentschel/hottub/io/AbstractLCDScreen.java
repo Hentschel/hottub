@@ -69,16 +69,22 @@ abstract class AbstractLCDScreen implements ILCDScreen
                 switch (event)
                 {
                 case BlowerOn:
+                    AbstractLCDScreen.this.updateBlower(true);
                     break;
                 case BlowerOff:
+                    AbstractLCDScreen.this.updateBlower(false);
                     break;
                 case PumpOn:
+                    AbstractLCDScreen.this.updatePump(true);
                     break;
                 case PumpOff:
+                    AbstractLCDScreen.this.updatePump(false);
                     break;
                 case HeaterOn:
+                    AbstractLCDScreen.this.updateHeater(true);
                     break;
                 case HeaterOff:
+                    AbstractLCDScreen.this.updateHeater(false);
                     break;
                 default:
                     break;
@@ -104,6 +110,12 @@ abstract class AbstractLCDScreen implements ILCDScreen
             }
         };
     }
+
+    protected abstract void updateHeater(boolean b);
+
+    protected abstract void updatePump(boolean b);
+
+    protected abstract void updateBlower(boolean b);
 
     public void init()
     {

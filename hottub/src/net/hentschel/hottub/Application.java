@@ -44,7 +44,7 @@ public class Application
 
     private static final Map<String, IDigitalIO> IOMAP = new HashMap<String, IDigitalIO>();
 
-    private static final int DEFAULTPORT = 8888;
+    private static final int DEFAULTPORT = 80;
 
     public static Application APP = new Application();
 
@@ -74,15 +74,15 @@ public class Application
     {
         if (type.equalsIgnoreCase("ILCDScreen"))
         {
-            return true;
+            return false;
         }
         if (type.equalsIgnoreCase("I2CSensor"))
         {
-            return true;
+            return false;
         }
         if (type.equalsIgnoreCase("IDigitalIO"))
         {
-            return true;
+            return false;
         }
         return false;
     }

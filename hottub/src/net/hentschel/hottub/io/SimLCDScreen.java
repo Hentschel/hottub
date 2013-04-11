@@ -48,4 +48,22 @@ public class SimLCDScreen extends AbstractLCDScreen
     {
         Simulation.INSTANCE.updateTemperature(data);
     }
+
+    protected void updateHeater(boolean b)
+    {
+        // TODO Auto-generated method stub
+        
+    }
+
+    protected void updatePump(boolean b)
+    {
+        // TODO Auto-generated method stub
+        
+    }
+
+    protected void updateBlower(boolean b)
+    {
+        // TODO Auto-generated method stub
+        
+    }
 }
